@@ -1,16 +1,8 @@
 spring:
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:dev}
   application:
     name: app-financeiro-backend
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:h2:mem:finanzas;DB_CLOSE_DELAY=-1;MODE=PostgreSQL}
-    username: ${SPRING_DATASOURCE_USERNAME:sa}
-    password: ${SPRING_DATASOURCE_PASSWORD:}
-    driver-class-name: org.h2.Driver
-    hikari:
-      maximum-pool-size: 10
-      minimum-idle: 2
-      idle-timeout: 30000
-      connection-timeout: 20000
   jpa:
     hibernate:
       ddl-auto: validate
@@ -24,14 +16,18 @@ spring:
     locations: classpath:db/migration
 
 server:
-  port: 8080
+  port: ${PORT:8080}
   servlet:
     context-path: /api/v1
 
 jwt:
-  secret: ${JWT_SECRET:404E635266556A586E3272357538782F413F4428472B4B6250655368566D5971}
-  expiration-ms: ${JWT_EXPIRATION_MS:86400000} # 24h
+  secret: ${JWT_SECRET}
+  expiration-ms: ${JWT_EXPIRATION_MS:900000} # 15 minutos
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000} # 7 dias
+
+app:
+  cors:
+    allowed-origins: ${APP_CORS_ORIGINS:http://localhost:5173,http://localhost:3000}
 
 springdoc:
   api-docs:
@@ -43,4 +39,4 @@ springdoc:
 logging:
   level:
     root: INFO
-    com.appfinanceiro: DEBUG
+    com.appfinanceiro: INFO

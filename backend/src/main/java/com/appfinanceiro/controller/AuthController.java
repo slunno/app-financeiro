@@ -7,6 +7,7 @@ import com.appfinanceiro.security.UserPrincipal;
 import com.appfinanceiro.service.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/auth")
 @RequiredArgsConstructor
-@Tag(name = "Autenticação & Usuário", description = "Endpoints de cadastro, login, refresh token e gestão de perfil")
+@Tag(name = "Autenticação & Usuário", description = "Endpoints de cadastro, login, refresh token, logout e gestão de perfil")
 public class AuthController {
 
     private final AuthService authService;
@@ -30,17 +31,32 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    @Operation(summary = "Autenticar usuário", description = "Valida e-mail/senha e retorna os tokens JWT (access + refresh)")
-    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request) {
-        AuthResponseDTO response = authService.login(request);
+    @Operation(summary = "Autenticar usuário", description = "Valida e-mail/senha com rate limit e retorna os tokens JWT (access + refresh)")
+    public ResponseEntity<AuthResponseDTO> login(@Valid @RequestBody LoginRequestDTO request, HttpServletRequest httpRequest) {
+        String clientIp = httpRequest.getHeader("X-Forwarded-For");
+        if (clientIp == null || clientIp.isBlank()) {
+            clientIp = httpRequest.getRemoteAddr();
+        } else {
+            clientIp = clientIp.split(",")[0].trim();
+        }
+        AuthResponseDTO response = authService.login(request, clientIp);
         return ResponseEntity.ok(response);
     }
 
     @PostMapping("/refresh")
-    @Operation(summary = "Renovar token de acesso", description = "Gera um novo par de tokens usando o refresh token")
+    @Operation(summary = "Renovar token de acesso", description = "Gera um novo par de tokens usando o refresh token com rotação")
     public ResponseEntity<AuthResponseDTO> refreshToken(@Valid @RequestBody RefreshTokenRequestDTO request) {
         AuthResponseDTO response = authService.refreshToken(request);
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Encerrar sessão (Logout)", description = "Revoga o refresh token informado")
+    public ResponseEntity<Void> logout(@RequestBody(required = false) RefreshTokenRequestDTO request) {
+        if (request != null && request.refreshToken() != null) {
+            authService.logout(request.refreshToken());
+        }
+        return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/me")

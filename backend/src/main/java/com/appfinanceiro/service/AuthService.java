@@ -1,5 +1,6 @@
 package com.appfinanceiro.service;
 
+import com.appfinanceiro.domain.RefreshToken;
 import com.appfinanceiro.domain.User;
 import com.appfinanceiro.domain.UserXP;
 import com.appfinanceiro.domain.enums.UserRole;
@@ -9,9 +10,11 @@ import com.appfinanceiro.dto.response.UserResponseDTO;
 import com.appfinanceiro.dto.response.UserXPResponseDTO;
 import com.appfinanceiro.exception.EmailAlreadyExistsException;
 import com.appfinanceiro.exception.ResourceNotFoundException;
+import com.appfinanceiro.repository.RefreshTokenRepository;
 import com.appfinanceiro.repository.UserRepository;
 import com.appfinanceiro.repository.UserXPRepository;
 import com.appfinanceiro.security.JwtTokenProvider;
+import com.appfinanceiro.security.LoginRateLimiterService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -20,7 +23,11 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.UUID;
 
 @Service
@@ -29,9 +36,11 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final UserXPRepository userXPRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtTokenProvider jwtTokenProvider;
     private final AuthenticationManager authenticationManager;
+    private final LoginRateLimiterService loginRateLimiterService;
 
     @Transactional
     public AuthResponseDTO register(RegisterRequestDTO request) {
@@ -61,25 +70,32 @@ public class AuthService {
         userXP = userXPRepository.save(userXP);
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+        String refreshTokenStr = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+
+        createAndSaveRefreshToken(user, refreshTokenStr);
 
         return new AuthResponseDTO(
                 accessToken,
-                refreshToken,
+                refreshTokenStr,
                 mapToUserResponse(user),
                 mapToUserXPResponse(userXP)
         );
     }
 
     @Transactional
-    public AuthResponseDTO login(LoginRequestDTO request) {
+    public AuthResponseDTO login(LoginRequestDTO request, String clientIp) {
+        loginRateLimiterService.checkRateLimit(clientIp, request.email());
+
         try {
             authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.email(), request.password())
             );
         } catch (BadCredentialsException ex) {
+            loginRateLimiterService.recordFailedAttempt(clientIp, request.email());
             throw new BadCredentialsException("E-mail ou senha incorretos.");
         }
+
+        loginRateLimiterService.resetAttempts(clientIp, request.email());
 
         User user = userRepository.findByEmail(request.email())
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", request.email()));
@@ -87,7 +103,6 @@ public class AuthService {
         UserXP userXP = userXPRepository.findByUserId(user.getId())
                 .orElseGet(() -> userXPRepository.save(UserXP.builder().user(user).build()));
 
-        // Atualiza streak se aplicável
         if (userXP.getLastActivityDate() == null || !userXP.getLastActivityDate().equals(LocalDate.now())) {
             if (userXP.getLastActivityDate() != null && userXP.getLastActivityDate().equals(LocalDate.now().minusDays(1))) {
                 userXP.setStreakDays(userXP.getStreakDays() + 1);
@@ -99,38 +114,62 @@ public class AuthService {
         }
 
         String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
-        String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+        String refreshTokenStr = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+
+        createAndSaveRefreshToken(user, refreshTokenStr);
 
         return new AuthResponseDTO(
                 accessToken,
-                refreshToken,
+                refreshTokenStr,
                 mapToUserResponse(user),
                 mapToUserXPResponse(userXP)
         );
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public AuthResponseDTO refreshToken(RefreshTokenRequestDTO request) {
         if (!jwtTokenProvider.validateToken(request.refreshToken())) {
             throw new BadCredentialsException("Refresh Token inválido ou expirado.");
         }
 
-        String email = jwtTokenProvider.getEmailFromToken(request.refreshToken());
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("Usuário", "email", email));
+        String tokenHash = hashToken(request.refreshToken());
+        RefreshToken storedToken = refreshTokenRepository.findByTokenHash(tokenHash)
+                .orElseThrow(() -> new BadCredentialsException("Refresh Token não encontrado ou já revogado."));
 
+        if (storedToken.isRevoked() || storedToken.getExpiresAt().isBefore(LocalDateTime.now())) {
+            throw new BadCredentialsException("Refresh Token revogado ou expirado.");
+        }
+
+        // Rotação: Revoga o token atual
+        storedToken.setRevoked(true);
+        refreshTokenRepository.save(storedToken);
+
+        User user = storedToken.getUser();
         UserXP userXP = userXPRepository.findByUserId(user.getId())
                 .orElseThrow(() -> new ResourceNotFoundException("UserXP não encontrado"));
 
         String newAccessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getEmail());
-        String newRefreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+        String newRefreshTokenStr = jwtTokenProvider.generateRefreshToken(user.getId(), user.getEmail());
+
+        createAndSaveRefreshToken(user, newRefreshTokenStr);
 
         return new AuthResponseDTO(
                 newAccessToken,
-                newRefreshToken,
+                newRefreshTokenStr,
                 mapToUserResponse(user),
                 mapToUserXPResponse(userXP)
         );
+    }
+
+    @Transactional
+    public void logout(String refreshTokenStr) {
+        if (refreshTokenStr != null && !refreshTokenStr.isBlank()) {
+            String tokenHash = hashToken(refreshTokenStr);
+            refreshTokenRepository.findByTokenHash(tokenHash).ifPresent(token -> {
+                token.setRevoked(true);
+                refreshTokenRepository.save(token);
+            });
+        }
     }
 
     @Transactional(readOnly = true)
@@ -167,6 +206,29 @@ public class AuthService {
 
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         userRepository.save(user);
+    }
+
+    private void createAndSaveRefreshToken(User user, String rawRefreshToken) {
+        String tokenHash = hashToken(rawRefreshToken);
+        LocalDateTime expiresAt = LocalDateTime.now().plusDays(7);
+        RefreshToken refreshToken = new RefreshToken(null, tokenHash, user, expiresAt, false, LocalDateTime.now());
+        refreshTokenRepository.save(refreshToken);
+    }
+
+    private String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hash) {
+                String hex = Integer.toHexString(0xff & b);
+                if (hex.length() == 1) hexString.append('0');
+                hexString.append(hex);
+            }
+            return hexString.toString();
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException("Erro ao calcular hash do token", e);
+        }
     }
 
     public UserResponseDTO mapToUserResponse(User user) {
