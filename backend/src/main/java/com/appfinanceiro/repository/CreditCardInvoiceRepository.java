@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -24,4 +25,9 @@ public interface CreditCardInvoiceRepository extends JpaRepository<CreditCardInv
 
     @Query("SELECT i FROM CreditCardInvoice i WHERE i.id = :id AND i.creditCard.user.id = :userId")
     Optional<CreditCardInvoice> findByIdAndUserId(@Param("id") UUID id, @Param("userId") UUID userId);
+
+    // Soma do valor não pago de faturas (total - paid) para cálculo de limite disponível
+    @Query("SELECT COALESCE(SUM(i.totalAmount - i.paidAmount), 0) FROM CreditCardInvoice i " +
+           "WHERE i.creditCard.id = :cardId AND i.status <> 'PAID'")
+    BigDecimal sumUnpaidAmountByCreditCardId(@Param("cardId") UUID cardId);
 }

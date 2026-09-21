@@ -15,6 +15,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -26,7 +27,7 @@ public class AccountController {
     private final AccountService accountService;
 
     @GetMapping
-    @Operation(summary = "Listar todas as contas do usuário")
+    @Operation(summary = "Listar todas as contas ativas do usuário")
     public ResponseEntity<List<AccountResponseDTO>> listAll(@AuthenticationPrincipal UserPrincipal userPrincipal) {
         return ResponseEntity.ok(accountService.findAllByUser(userPrincipal.getId()));
     }
@@ -57,11 +58,14 @@ public class AccountController {
     }
 
     @DeleteMapping("/{id}")
-    @Operation(summary = "Excluir conta")
-    public ResponseEntity<Void> delete(
+    @Operation(summary = "Excluir ou arquivar conta")
+    public ResponseEntity<?> delete(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
             @PathVariable UUID id) {
-        accountService.delete(id, userPrincipal.getId());
+        boolean archived = accountService.delete(id, userPrincipal.getId());
+        if (archived) {
+            return ResponseEntity.ok(Map.of("message", "Conta possui lançamentos vinculados e foi arquivada.", "archived", true));
+        }
         return ResponseEntity.noContent().build();
     }
 

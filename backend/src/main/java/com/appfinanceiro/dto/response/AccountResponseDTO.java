@@ -13,5 +13,6 @@ public record AccountResponseDTO(
     BigDecimal currentBalance,
     String bankName,
     String color,
-    String icon
+    String icon,
+    boolean archived
 ) {}

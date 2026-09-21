@@ -25,9 +25,6 @@ public class CreditCard {
     @Column(name = "credit_limit", nullable = false, precision = 15, scale = 2)
     private BigDecimal creditLimit;
 
-    @Column(name = "available_limit", nullable = false, precision = 15, scale = 2)
-    private BigDecimal availableLimit;
-
     @Column(name = "closing_day", nullable = false)
     private Integer closingDay;
 
@@ -49,12 +46,13 @@ public class CreditCard {
 
     public CreditCard() {}
 
-    public CreditCard(UUID id, User user, String name, BigDecimal creditLimit, BigDecimal availableLimit, Integer closingDay, Integer dueDay, String cardBrand, String color, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public CreditCard(UUID id, User user, String name, BigDecimal creditLimit,
+                      Integer closingDay, Integer dueDay, String cardBrand, String color,
+                      LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.user = user;
         this.name = name;
         this.creditLimit = creditLimit;
-        this.availableLimit = availableLimit;
         this.closingDay = closingDay;
         this.dueDay = dueDay;
         this.cardBrand = cardBrand;
@@ -72,7 +70,6 @@ public class CreditCard {
         private User user;
         private String name;
         private BigDecimal creditLimit;
-        private BigDecimal availableLimit;
         private Integer closingDay;
         private Integer dueDay;
         private String cardBrand;
@@ -84,7 +81,6 @@ public class CreditCard {
         public CreditCardBuilder user(User user) { this.user = user; return this; }
         public CreditCardBuilder name(String name) { this.name = name; return this; }
         public CreditCardBuilder creditLimit(BigDecimal creditLimit) { this.creditLimit = creditLimit; return this; }
-        public CreditCardBuilder availableLimit(BigDecimal availableLimit) { this.availableLimit = availableLimit; return this; }
         public CreditCardBuilder closingDay(Integer closingDay) { this.closingDay = closingDay; return this; }
         public CreditCardBuilder dueDay(Integer dueDay) { this.dueDay = dueDay; return this; }
         public CreditCardBuilder cardBrand(String cardBrand) { this.cardBrand = cardBrand; return this; }
@@ -93,7 +89,7 @@ public class CreditCard {
         public CreditCardBuilder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 
         public CreditCard build() {
-            return new CreditCard(id, user, name, creditLimit, availableLimit, closingDay, dueDay, cardBrand, color, createdAt, updatedAt);
+            return new CreditCard(id, user, name, creditLimit, closingDay, dueDay, cardBrand, color, createdAt, updatedAt);
         }
     }
 
@@ -113,9 +109,6 @@ public class CreditCard {
 
     public BigDecimal getCreditLimit() { return creditLimit; }
     public void setCreditLimit(BigDecimal creditLimit) { this.creditLimit = creditLimit; }
-
-    public BigDecimal getAvailableLimit() { return availableLimit; }
-    public void setAvailableLimit(BigDecimal availableLimit) { this.availableLimit = availableLimit; }
 
     public Integer getClosingDay() { return closingDay; }
     public void setClosingDay(Integer closingDay) { this.closingDay = closingDay; }

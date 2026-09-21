@@ -1,6 +1,7 @@
 package com.appfinanceiro.controller;
 
 import com.appfinanceiro.dto.request.CreditCardRequestDTO;
+import com.appfinanceiro.dto.request.PayInvoiceRequestDTO;
 import com.appfinanceiro.dto.response.CreditCardInvoiceResponseDTO;
 import com.appfinanceiro.dto.response.CreditCardResponseDTO;
 import com.appfinanceiro.security.UserPrincipal;
@@ -74,10 +75,11 @@ public class CreditCardController {
     }
 
     @PostMapping("/invoices/{invoiceId}/pay")
-    @Operation(summary = "Pagar fatura do cartão")
+    @Operation(summary = "Pagar fatura do cartão (exige accountId)")
     public ResponseEntity<CreditCardInvoiceResponseDTO> payInvoice(
             @AuthenticationPrincipal UserPrincipal userPrincipal,
-            @PathVariable UUID invoiceId) {
-        return ResponseEntity.ok(creditCardService.payInvoice(invoiceId, userPrincipal.getId()));
+            @PathVariable UUID invoiceId,
+            @Valid @RequestBody PayInvoiceRequestDTO request) {
+        return ResponseEntity.ok(creditCardService.payInvoice(invoiceId, userPrincipal.getId(), request));
     }
 }

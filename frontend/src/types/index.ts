@@ -2,7 +2,7 @@ export type AccountType = 'CHECKING' | 'SAVINGS' | 'INVESTMENT' | 'DIGITAL_WALLE
 export type TransactionType = 'INCOME' | 'EXPENSE' | 'TRANSFER';
 export type TransactionStatus = 'PENDING' | 'COMPLETED' | 'CANCELLED';
 export type PaymentMethod = 'DEBIT_CARD' | 'CREDIT_CARD' | 'PIX' | 'BANK_SLIP' | 'CASH' | 'TRANSFER';
-export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'PAID' | 'OVERDUE';
+export type InvoiceStatus = 'OPEN' | 'CLOSED' | 'PARTIALLY_PAID' | 'PAID' | 'OVERDUE';
 export type GoalStatus = 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
 export type MissionFrequency = 'DAILY' | 'WEEKLY' | 'MONTHLY';
 export type MissionDifficulty = 'EASY' | 'MEDIUM' | 'HARD';
@@ -46,6 +46,7 @@ export interface Account {
   bankName?: string;
   color?: string;
   icon?: string;
+  archived?: boolean;
 }
 
 export interface CreditCard {
@@ -89,6 +90,8 @@ export interface Transaction {
   paymentMethod: PaymentMethod;
   isRecurring: boolean;
   notes?: string;
+  transferGroupId?: string;
+  transferDirection?: string;
 }
 
 export interface Budget {

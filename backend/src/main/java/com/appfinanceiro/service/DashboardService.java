@@ -23,7 +23,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class DashboardService {
 
-    private final AccountRepository accountRepository;
+    private final AccountBalanceService accountBalanceService;
     private final TransactionRepository transactionRepository;
     private final UserXPRepository userXPRepository;
     private final BudgetService budgetService;
@@ -34,8 +34,7 @@ public class DashboardService {
 
     @Transactional(readOnly = true)
     public DashboardSummaryDTO getDashboardSummary(UUID userId) {
-        BigDecimal totalBalance = accountRepository.calculateTotalBalanceByUserId(userId);
-        if (totalBalance == null) totalBalance = BigDecimal.ZERO;
+        BigDecimal totalBalance = accountBalanceService.getTotalBalance(userId);
 
         YearMonth currentMonth = YearMonth.now();
         LocalDate start = currentMonth.atDay(1);

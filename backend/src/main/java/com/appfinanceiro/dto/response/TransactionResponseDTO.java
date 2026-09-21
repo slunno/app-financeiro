@@ -25,5 +25,7 @@ public record TransactionResponseDTO(
     TransactionStatus status,
     PaymentMethod paymentMethod,
     Boolean isRecurring,
-    String notes
+    String notes,
+    UUID transferGroupId,
+    String transferDirection
 ) {}

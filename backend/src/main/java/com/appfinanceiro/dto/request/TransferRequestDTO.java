@@ -4,6 +4,7 @@ import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.UUID;
 
 public record TransferRequestDTO(
@@ -17,5 +18,9 @@ public record TransferRequestDTO(
     @DecimalMin(value = "0.01", message = "O valor mínimo de transferência é R$ 0,01")
     BigDecimal amount,
 
-    String description
+    @NotNull(message = "A data é obrigatória.")
+    LocalDate date,
+
+    String description,
+    String notes
 ) {}

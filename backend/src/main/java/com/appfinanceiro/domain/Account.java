@@ -30,9 +30,6 @@ public class Account {
     @Column(name = "initial_balance", nullable = false, precision = 15, scale = 2)
     private BigDecimal initialBalance = BigDecimal.ZERO;
 
-    @Column(name = "current_balance", nullable = false, precision = 15, scale = 2)
-    private BigDecimal currentBalance = BigDecimal.ZERO;
-
     @Column(name = "bank_name", length = 100)
     private String bankName;
 
@@ -41,6 +38,9 @@ public class Account {
 
     @Column(length = 50)
     private String icon;
+
+    @Column(name = "archived_at")
+    private LocalDateTime archivedAt;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -51,16 +51,18 @@ public class Account {
 
     public Account() {}
 
-    public Account(UUID id, User user, String name, AccountType type, BigDecimal initialBalance, BigDecimal currentBalance, String bankName, String color, String icon, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Account(UUID id, User user, String name, AccountType type, BigDecimal initialBalance,
+                   String bankName, String color, String icon, LocalDateTime archivedAt,
+                   LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.user = user;
         this.name = name;
         this.type = type;
         this.initialBalance = initialBalance != null ? initialBalance : BigDecimal.ZERO;
-        this.currentBalance = currentBalance != null ? currentBalance : BigDecimal.ZERO;
         this.bankName = bankName;
         this.color = color;
         this.icon = icon;
+        this.archivedAt = archivedAt;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
     }
@@ -75,10 +77,10 @@ public class Account {
         private String name;
         private AccountType type;
         private BigDecimal initialBalance = BigDecimal.ZERO;
-        private BigDecimal currentBalance = BigDecimal.ZERO;
         private String bankName;
         private String color;
         private String icon;
+        private LocalDateTime archivedAt;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
 
@@ -87,21 +89,25 @@ public class Account {
         public AccountBuilder name(String name) { this.name = name; return this; }
         public AccountBuilder type(AccountType type) { this.type = type; return this; }
         public AccountBuilder initialBalance(BigDecimal initialBalance) { this.initialBalance = initialBalance; return this; }
-        public AccountBuilder currentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; return this; }
         public AccountBuilder bankName(String bankName) { this.bankName = bankName; return this; }
         public AccountBuilder color(String color) { this.color = color; return this; }
         public AccountBuilder icon(String icon) { this.icon = icon; return this; }
+        public AccountBuilder archivedAt(LocalDateTime archivedAt) { this.archivedAt = archivedAt; return this; }
         public AccountBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public AccountBuilder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 
         public Account build() {
-            return new Account(id, user, name, type, initialBalance, currentBalance, bankName, color, icon, createdAt, updatedAt);
+            return new Account(id, user, name, type, initialBalance, bankName, color, icon, archivedAt, createdAt, updatedAt);
         }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isArchived() {
+        return archivedAt != null;
     }
 
     public UUID getId() { return id; }
@@ -119,9 +125,6 @@ public class Account {
     public BigDecimal getInitialBalance() { return initialBalance; }
     public void setInitialBalance(BigDecimal initialBalance) { this.initialBalance = initialBalance; }
 
-    public BigDecimal getCurrentBalance() { return currentBalance; }
-    public void setCurrentBalance(BigDecimal currentBalance) { this.currentBalance = currentBalance; }
-
     public String getBankName() { return bankName; }
     public void setBankName(String bankName) { this.bankName = bankName; }
 
@@ -130,6 +133,9 @@ public class Account {
 
     public String getIcon() { return icon; }
     public void setIcon(String icon) { this.icon = icon; }
+
+    public LocalDateTime getArchivedAt() { return archivedAt; }
+    public void setArchivedAt(LocalDateTime archivedAt) { this.archivedAt = archivedAt; }
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }

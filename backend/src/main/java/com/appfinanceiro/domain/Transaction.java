@@ -66,6 +66,12 @@ public class Transaction {
     @Column(name = "recurrence_period", length = 20)
     private String recurrencePeriod;
 
+    @Column(name = "transfer_group_id")
+    private UUID transferGroupId;
+
+    @Column(name = "transfer_direction", length = 3)
+    private String transferDirection;
+
     @Column(columnDefinition = "TEXT")
     private String notes;
 
@@ -78,7 +84,12 @@ public class Transaction {
 
     public Transaction() {}
 
-    public Transaction(UUID id, User user, Account account, Category category, CreditCard creditCard, CreditCardInvoice creditCardInvoice, String description, BigDecimal amount, LocalDate date, TransactionType type, TransactionStatus status, PaymentMethod paymentMethod, Boolean isRecurring, String recurrencePeriod, String notes, LocalDateTime createdAt, LocalDateTime updatedAt) {
+    public Transaction(UUID id, User user, Account account, Category category, CreditCard creditCard,
+                       CreditCardInvoice creditCardInvoice, String description, BigDecimal amount,
+                       LocalDate date, TransactionType type, TransactionStatus status,
+                       PaymentMethod paymentMethod, Boolean isRecurring, String recurrencePeriod,
+                       UUID transferGroupId, String transferDirection, String notes,
+                       LocalDateTime createdAt, LocalDateTime updatedAt) {
         this.id = id;
         this.user = user;
         this.account = account;
@@ -93,6 +104,8 @@ public class Transaction {
         this.paymentMethod = paymentMethod;
         this.isRecurring = isRecurring != null ? isRecurring : false;
         this.recurrencePeriod = recurrencePeriod;
+        this.transferGroupId = transferGroupId;
+        this.transferDirection = transferDirection;
         this.notes = notes;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
@@ -117,6 +130,8 @@ public class Transaction {
         private PaymentMethod paymentMethod;
         private Boolean isRecurring = false;
         private String recurrencePeriod;
+        private UUID transferGroupId;
+        private String transferDirection;
         private String notes;
         private LocalDateTime createdAt;
         private LocalDateTime updatedAt;
@@ -135,18 +150,26 @@ public class Transaction {
         public TransactionBuilder paymentMethod(PaymentMethod paymentMethod) { this.paymentMethod = paymentMethod; return this; }
         public TransactionBuilder isRecurring(Boolean isRecurring) { this.isRecurring = isRecurring; return this; }
         public TransactionBuilder recurrencePeriod(String recurrencePeriod) { this.recurrencePeriod = recurrencePeriod; return this; }
+        public TransactionBuilder transferGroupId(UUID transferGroupId) { this.transferGroupId = transferGroupId; return this; }
+        public TransactionBuilder transferDirection(String transferDirection) { this.transferDirection = transferDirection; return this; }
         public TransactionBuilder notes(String notes) { this.notes = notes; return this; }
         public TransactionBuilder createdAt(LocalDateTime createdAt) { this.createdAt = createdAt; return this; }
         public TransactionBuilder updatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; return this; }
 
         public Transaction build() {
-            return new Transaction(id, user, account, category, creditCard, creditCardInvoice, description, amount, date, type, status, paymentMethod, isRecurring, recurrencePeriod, notes, createdAt, updatedAt);
+            return new Transaction(id, user, account, category, creditCard, creditCardInvoice,
+                    description, amount, date, type, status, paymentMethod, isRecurring,
+                    recurrencePeriod, transferGroupId, transferDirection, notes, createdAt, updatedAt);
         }
     }
 
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public boolean isTransfer() {
+        return transferGroupId != null;
     }
 
     public UUID getId() { return id; }
@@ -190,6 +213,12 @@ public class Transaction {
 
     public String getRecurrencePeriod() { return recurrencePeriod; }
     public void setRecurrencePeriod(String recurrencePeriod) { this.recurrencePeriod = recurrencePeriod; }
+
+    public UUID getTransferGroupId() { return transferGroupId; }
+    public void setTransferGroupId(UUID transferGroupId) { this.transferGroupId = transferGroupId; }
+
+    public String getTransferDirection() { return transferDirection; }
+    public void setTransferDirection(String transferDirection) { this.transferDirection = transferDirection; }
 
     public String getNotes() { return notes; }
     public void setNotes(String notes) { this.notes = notes; }
